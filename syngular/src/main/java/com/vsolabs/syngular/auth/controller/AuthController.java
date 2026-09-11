@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody UserRegisterRequest request) {
@@ -24,15 +26,16 @@ public class AuthController {
             throw new RuntimeException("El correo ya está registrado en el sistema.");
         }
 
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+
         // Mapea DTO a Entidad
         User newUser = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
-                .passwordHash(request.getPassword())
+                .passwordHash(hashedPassword)
                 .build();
 
         User savedUser = userService.registerNewUser(newUser, request.getRoleName());
-
         // Mapea Entidad a DTO de respuesta
         UserResponse response = UserResponse.builder()
                 .id(savedUser.getId())
@@ -41,7 +44,7 @@ public class AuthController {
                 .roleName(savedUser.getRole().getName())
                 .isActive(savedUser.getIsActive())
                 .build();
-        
+
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }
